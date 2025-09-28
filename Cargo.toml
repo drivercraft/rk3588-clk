@@ -10,7 +10,7 @@ tock-registers = "0.10.0"
 
 [dev-dependencies]
 bare-test = "0.7"
-sdmmc = { path = "/home/yanlien/Workspace/QCL/console/sdmmc" }
+sdmmc = { git = "https://github.com/YanQD/sdmmc.git" }
 
 [build-dependencies]
 bare-test-macros = "0.2"
