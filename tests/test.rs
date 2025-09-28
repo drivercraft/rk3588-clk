@@ -14,7 +14,7 @@ mod tests {
         time::since_boot,
     };
     use log::{info, warn};
-    use rk3588_clk::{Rk3588Cru, CCLK_EMMC};
+    use rk3588_clk::{CCLK_EMMC, Rk3588Cru};
     use sdmmc::emmc::EMmcHost;
     use sdmmc::{
         Kernel,
@@ -107,7 +107,9 @@ mod tests {
     }
 
     fn init_clk(clk_addr: usize) -> Result<(), ClkError> {
-        let cru = ClkUnit::new(Rk3588Cru::new(core::ptr::NonNull::new(clk_addr as *mut u8).unwrap()));
+        let cru = ClkUnit::new(Rk3588Cru::new(
+            core::ptr::NonNull::new(clk_addr as *mut u8).unwrap(),
+        ));
 
         let static_clk: &'static dyn Clk = Box::leak(Box::new(cru));
         init_global_clk(static_clk);
@@ -156,13 +158,11 @@ mod tests {
                 println!("Testing write and read back...");
                 let test_block_id = 0x3; // Use a safe block address for testing
 
-
                 let mut write_buffer: [u8; 512] = [0; 512];
                 for i in 0..512 {
                     // write_buffer[i] = (i % 256) as u8; // Fill with test pattern data
                     write_buffer[i] = 0 as u8;
                 }
-
 
                 // Write data
                 match emmc.write_blocks(test_block_id, 1, &write_buffer) {

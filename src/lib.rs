@@ -152,10 +152,7 @@ impl Rk3588Cru {
 
                 debug!(
                     "CCLK_EMMC: src_clk {}, div {}, new_value {:#x}, final_value {:#x}",
-                    src_clk,
-                    div,
-                    new_value,
-                    final_value
+                    src_clk, div, new_value, final_value
                 );
 
                 clksel.cru_clksel_con77.set(final_value);
