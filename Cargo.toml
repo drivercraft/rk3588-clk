@@ -1,15 +1,16 @@
 [package]
 edition = "2024"
-name = "project-name"
+name = "rk3588-clk"
 version = "0.1.0"
 
 [dependencies]
-mbarrier = "0.1"
-dma-api = { version = "0.3", features = ["alloc"] }
 log = "0.4"
+mbarrier = "0.1"
+tock-registers = "0.10.0"
 
 [dev-dependencies]
-bare-test = "0.4"
+bare-test = "0.7"
+sdmmc = { path = "/home/yanlien/Workspace/QCL/console/sdmmc" }
 
 [build-dependencies]
 bare-test-macros = "0.2"
