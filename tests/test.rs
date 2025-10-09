@@ -14,7 +14,7 @@ mod tests {
         time::since_boot,
     };
     use log::{info, warn};
-    use rk3588_clk::{CCLK_EMMC, Rk3588Cru};
+    use rk3588_clk::{Rk3588Cru, constant::CCLK_EMMC};
     use sdmmc::emmc::EMmcHost;
     use sdmmc::{
         Kernel,

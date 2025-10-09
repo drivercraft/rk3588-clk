@@ -201,6 +201,7 @@ pub struct ClkSelRegisters {
     // cru_clksel_con175: ReadWrite<u32, CRU_CLKSEL_CON175::Register>,
     pub cru_clksel_con176: ReadWrite<u32, CRU_CLKSEL_CON176::Register>,
     pub cru_clksel_con177: ReadWrite<u32, CRU_CLKSEL_CON177::Register>,
+    _reserved27: [u32; 10],
 }
 
 // CRU_CLKSEL_CON00  0x0300;

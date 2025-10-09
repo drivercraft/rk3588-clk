@@ -652,11 +652,10 @@ pub struct Rk3588CruRegisters {
     cpll: CpllRegisters,   // 0x1A0
     gpll: GpllRegisters,   // 0x1C0
     npll: NpllRegisters,   // 0x1E0
-    _reserved0: [u8; 0x104],
-    mode: ModeRegisters, // 0x280
-    _reserved1: [u8; 0x7C],
+    _reserved0: [u8; 0x80],
+    mode: ModeRegisters,     // 0x280
     clksel: ClkSelRegisters, // 0x300
-    _reserved2: [u8; 0x238],
+    _reserved2: [u8; 0x200],
     gate: GateRegisters, // 0x800
     _reserved3: [u8; 0xC8],
     softrst: SoftRstRegisters, // 0xA00
