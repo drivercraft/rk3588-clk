@@ -10,7 +10,7 @@ pub mod pll;
 pub mod softrst;
 pub mod tools;
 
-use log::debug;
+use log::{debug, info};
 use tock_registers::interfaces::{Readable, Writeable};
 
 use crate::{
@@ -31,6 +31,20 @@ pub const APLL_L_HZ: usize = 800 * 1000 * 1000;
 pub const APLL_B_HZ: usize = 816 * 1000 * 1000;
 pub const GPLL_HZ: usize = 1188 * 1000 * 1000;
 pub const CPLL_HZ: usize = 1500 * 1000 * 1000;
+pub const B0PLL_HZ: usize = 24 * 1000 * 1000;
+pub const B1PLL_HZ: usize = 24 * 1000 * 1000;
+pub const LPLL_HZ: usize = 24 * 1000 * 1000;
+pub const V0PLL_HZ: usize = 24 * 1000 * 1000;
+pub const AUPLL_HZ: usize = 786431 * 1000;
+pub const NPLL_HZ: usize = 850 * 1000 * 1000;
+pub const PPLL_HZ: usize = 1100 * 1000 * 1000;
+pub const ACLK_CENTER_ROOT_HZ: usize = 702 * 1000 * 1000;
+pub const PCLK_CENTER_ROOT_HZ: usize = 100 * 1000 * 1000;
+pub const HCLK_CENTER_ROOT_HZ: usize = 396 * 1000 * 1000;
+pub const ACLK_CENTER_LOW_ROOT_HZ: usize = 500 * 1000 * 1000;
+pub const ACLK_TOP_ROOT_HZ: usize = 594 * 1000 * 1000;
+pub const PCLK_TOP_ROOT_HZ: usize = 100 * 1000 * 1000;
+pub const ACLK_LOW_TOP_ROOT_HZ: usize = 396 * 1000 * 1000;
 
 pub struct Rk3588Cru {
     addr: NonNull<u8>,
@@ -421,7 +435,7 @@ impl Rk3588Cru {
         }
     }
 
-    pub fn npu_gate_enable(&self, gate_id: u32) -> Result<bool, ()> {
+    pub fn npu_gate_enable(&self, gate_id: u32) -> Result<bool, &'static str> {
         debug!("Enabling gate_id {}", gate_id);
         let reg = &self.registers().gate;
 
@@ -491,11 +505,11 @@ impl Rk3588Cru {
                 reg.gate_con29.set((1 << (11 + 16)) | (0 << 11));
             }
             _ => {
-                return Err(());
+                return Err("Unknown gate ID");
             }
         }
 
-        Ok(true)
+        self.npu_gate_status(gate_id)
     }
 
     pub fn npu_gate_disable(&self, gate_id: u32) -> Result<bool, ()> {
@@ -560,7 +574,7 @@ impl Rk3588Cru {
         Ok(true)
     }
 
-    pub fn npu_gate_status(&self, gate_id: u32) -> Result<bool, ()> {
+    pub fn npu_gate_status(&self, gate_id: u32) -> Result<bool, &'static str> {
         debug!("Getting status for gate_id {}", gate_id);
         let reg = &self.registers().gate;
 
@@ -569,70 +583,86 @@ impl Rk3588Cru {
         let is_enabled = match gate_id {
             ACLK_NPU1 => {
                 let val = reg.gate_con27.get();
+                info!("gate_con27 value: {:#x}", val);
                 (val & (1 << 0)) == 0 // bit[0]=0 表示使能
             }
             HCLK_NPU1 => {
                 let val = reg.gate_con27.get();
+                info!("gate_con27 value: {:#x}", val);
                 (val & (1 << 2)) == 0
             }
             ACLK_NPU2 => {
                 let val = reg.gate_con28.get();
+                info!("gate_con28 value: {:#x}", val);
                 (val & (1 << 0)) == 0
             }
             HCLK_NPU2 => {
                 let val = reg.gate_con28.get();
+                info!("gate_con28 value: {:#x}", val);
                 (val & (1 << 2)) == 0
             }
             FCLK_NPU_CM0_CORE => {
                 let val = reg.gate_con30.get();
+                info!("gate_con30 value: {:#x}", val);
                 (val & (1 << 3)) == 0
             }
             PCLK_NPU_PVTM => {
                 let val = reg.gate_con29.get();
+                info!("gate_con29 value: {:#x}", val);
                 (val & (1 << 12)) == 0
             }
             PCLK_NPU_GRF => {
                 let val = reg.gate_con29.get();
+                info!("gate_con29 value: {:#x}", val);
                 (val & (1 << 13)) == 0
             }
             CLK_NPU_PVTM => {
                 let val = reg.gate_con29.get();
+                info!("gate_con29 value: {:#x}", val);
                 (val & (1 << 14)) == 0
             }
             CLK_CORE_NPU_PVTM => {
                 let val = reg.gate_con29.get();
+                info!("gate_con29 value: {:#x}", val);
                 (val & (1 << 15)) == 0
             }
             ACLK_NPU0 => {
                 let val = reg.gate_con30.get();
+                info!("gate_con30 value: {:#x}", val);
                 (val & (1 << 6)) == 0
             }
             HCLK_NPU0 => {
                 let val = reg.gate_con30.get();
+                info!("gate_con30 value: {:#x}", val);
                 (val & (1 << 8)) == 0
             }
             PCLK_NPU_TIMER => {
                 let val = reg.gate_con29.get();
+                info!("gate_con29 value: {:#x}", val);
                 (val & (1 << 6)) == 0
             }
             CLK_NPUTIMER0 => {
                 let val = reg.gate_con29.get();
+                info!("gate_con29 value: {:#x}", val);
                 (val & (1 << 8)) == 0
             }
             CLK_NPUTIMER1 => {
                 let val = reg.gate_con29.get();
+                info!("gate_con29 value: {:#x}", val);
                 (val & (1 << 9)) == 0
             }
             PCLK_NPU_WDT => {
                 let val = reg.gate_con29.get();
+                info!("gate_con29 value: {:#x}", val);
                 (val & (1 << 10)) == 0
             }
             TCLK_NPU_WDT => {
                 let val = reg.gate_con29.get();
+                info!("gate_con29 value: {:#x}", val);
                 (val & (1 << 11)) == 0
             }
             _ => {
-                return Err(());
+                return Err("Unknown gate ID");
             }
         };
 
