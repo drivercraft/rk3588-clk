@@ -9,18 +9,31 @@ mod tests {
     use alloc::{boxed::Box, vec::Vec};
     use bare_test::{
         globals::{PlatformInfoKind, global_val},
-        mem::iomap,
+        mem::{iomap, page_size},
         println,
         time::since_boot,
     };
     use log::{info, warn};
-    use rk3588_clk::{Rk3588Cru, constant::CCLK_EMMC};
+    use rk3588_clk::{constant::*, Rk3588Cru};
+    use rockchip_pm::PD;
     use sdmmc::emmc::EMmcHost;
     use sdmmc::{
         Kernel,
         emmc::clock::{Clk, ClkError, init_global_clk},
         set_impl,
     };
+
+    use rockchip_pm::{RockchipPM, RkBoard};
+    use core::ptr::NonNull;
+
+    /// NPU 主电源域
+    pub const NPU: PD = PD(8);
+    /// NPU TOP 电源域  
+    pub const NPUTOP: PD = PD(9);
+    /// NPU1 电源域
+    pub const NPU1: PD = PD(10);
+    /// NPU2 电源域
+    pub const NPU2: PD = PD(11);
 
     struct SKernel;
 
@@ -39,43 +52,38 @@ mod tests {
 
     #[test]
     fn test_platform() {
-        let PlatformInfoKind::DeviceTree(fdt) = &global_val().platform_info;
-        let fdt_parser = fdt.get();
-
-        let emmc = fdt_parser
-            .find_compatible(&["rockchip,dwcmshc-sdhci"])
-            .next()
-            .unwrap();
-        let clock = fdt_parser
-            .find_compatible(&["rockchip,rk3588-cru"])
-            .next()
-            .unwrap();
-
-        info!("EMMC: {} Clock: {}", emmc.name, clock.name);
-
-        let emmc_reg = emmc.reg().unwrap().next().unwrap();
-        let clk_reg = clock.reg().unwrap().next().unwrap();
-
-        println!(
-            "EMMC reg {:#x}, {:#x}",
-            emmc_reg.address,
-            emmc_reg.size.unwrap()
-        );
-        println!(
-            "Clock reg {:#x}, {:#x}",
-            clk_reg.address,
-            clk_reg.size.unwrap()
-        );
-        // println!("Syscon reg {:#x}, {:#x}", syscon_reg.address, syscon_reg.size.unwrap());
-
-        let emmc_addr_ptr = iomap((emmc_reg.address as usize).into(), emmc_reg.size.unwrap());
-        let clk_add_ptr = iomap((clk_reg.address as usize).into(), clk_reg.size.unwrap());
-        // let syscon_addr_ptr = iomap((syscon_reg.address as usize).into(), syscon_reg.size.unwrap());
+        let emmc_addr_ptr = get_device_addr("rockchip,dwcmshc-sdhci");
+        let clk_add_ptr = get_device_addr("rockchip,rk3588-cru");
+        let sys_npu_grf_ptr = get_device_addr("rockchip,rk3588-npu-grf");
+        let npu_addr_ptr = get_device_addr("rockchip,rk3588-rknpu");
+        let pmu_addr_ptr = get_device_addr("rockchip,rk3588-pmu");
+        
+        info!("emmc ptr: {:p}", emmc_addr_ptr);
+        info!("clk ptr: {:p}", clk_add_ptr);
+        info!("npu grf ptr: {:p}", sys_npu_grf_ptr);
+        info!("npu ptr: {:p}", npu_addr_ptr);
+        info!("pmu ptr: {:p}", pmu_addr_ptr);
 
         let emmc_addr = emmc_addr_ptr.as_ptr() as usize;
         let clk_addr = clk_add_ptr.as_ptr() as usize;
+        let sys_npu_grf = sys_npu_grf_ptr.as_ptr() as usize;
+        let npu_addr = npu_addr_ptr.as_ptr() as usize;
+        let pmu_addr = pmu_addr_ptr.as_ptr() as usize;
+
+        info!("emmc addr: {:#x}", emmc_addr);
+        info!("clk addr: {:#x}", clk_addr);
+        info!("npu grf addr: {:#x}", sys_npu_grf);
+        info!("npu addr: {:#x}", npu_addr);
+        info!("pmu addr: {:#x}", pmu_addr);
+
+        test_pm(pmu_addr_ptr);
 
         test_emmc(emmc_addr, clk_addr);
+
+        let npu = unsafe { core::ptr::read_volatile(sys_npu_grf as *const u32) };
+        println!("npu version: {:#x}", npu);
+
+        test_npu_cru(npu_addr, clk_addr);
 
         info!("test uboot");
     }
@@ -250,5 +258,120 @@ mod tests {
 
         // Test complete
         println!("SD card test complete");
+    }
+
+    fn test_pm(reg: NonNull<u8>) {
+        let board = RkBoard::Rk3588;
+
+        let mut pm = RockchipPM::new(reg, board);
+
+        let npu = get_npu_info();
+
+        pm.power_domain_on(NPUTOP).unwrap();
+        pm.power_domain_on(NPU).unwrap();
+        pm.power_domain_on(NPU1).unwrap();
+        pm.power_domain_on(NPU2).unwrap();
+
+        unsafe {
+            let ptr = npu.base.as_ptr() as *mut u32;
+            let version = ptr.read_volatile();
+            info!("NPU Version: {version:#x}");
+        }
+    }
+
+    struct NpuInfo {
+        base: NonNull<u8>,
+        domains: Vec<PD>,
+    }
+
+    fn get_npu_info() -> NpuInfo {
+        let PlatformInfoKind::DeviceTree(fdt) = &global_val().platform_info;
+        let fdt = fdt.get();
+
+        let node = fdt
+            .find_compatible(&["rockchip,rk3588-rknpu"])
+            .next()
+            .expect("Failed to find npu0 node");
+
+        info!("Found node: {}", node.name());
+
+        let regs = node.reg().unwrap().collect::<Vec<_>>();
+        let start = regs[0].address as usize;
+        let end = start + regs[0].size.unwrap_or(0);
+        info!("NPU0 address range: 0x{:x} - 0x{:x}", start, end);
+        let start = start & !(page_size() - 1);
+        let end = (end + page_size() - 1) & !(page_size() - 1);
+        info!("Aligned NPU0 address range: 0x{:x} - 0x{:x}", start, end);
+        let base = iomap(start.into(), end - start);
+
+        let mut domains = Vec::new();
+
+        let pd_prop = node
+            .find_property("power-domains")
+            .expect("Failed to find power-domains property");
+        let pd_ls = pd_prop.u32_list().collect::<Vec<_>>();
+        for pd in pd_ls.chunks(2) {
+            let phandle = pd[0];
+            let pd = PD::from(pd[1]);
+            let pm_node = node
+                .fdt()
+                .get_node_by_phandle(phandle.into())
+                .expect("Failed to find power domain node");
+            info!("Found power domain node: {}", pm_node.name());
+
+            domains.push(pd);
+        }
+
+        NpuInfo { base, domains }
+    }
+
+    fn get_device_addr(dtc_str: &str) -> NonNull<u8> {
+        let PlatformInfoKind::DeviceTree(fdt) = &global_val().platform_info;
+        let fdt = fdt.get();
+
+        let binding = [dtc_str];
+        let node = fdt
+            .find_compatible(&binding)
+            .next()
+            .expect("Failed to find syscon node");
+
+        info!("Found node: {}", node.name());
+
+        let regs = node.reg().unwrap().collect::<Vec<_>>();
+        let start = regs[0].address as usize;
+        let end = start + regs[0].size.unwrap_or(0);
+        info!("Syscon address range: 0x{:x} - 0x{:x}", start, end);
+        let start = start & !(page_size() - 1);
+        let end = (end + page_size() - 1) & !(page_size() - 1);
+        info!("Aligned Syscon address range: 0x{:x} - 0x{:x}", start, end);
+        iomap(start.into(), end - start)
+    }
+
+    fn test_npu_cru(npu_addr: usize, clock: usize) {
+        info!("test npu cru");
+
+        let cru = ClkUnit::new(Rk3588Cru::new(
+            core::ptr::NonNull::new(clock as *mut u8).unwrap(),
+        ));
+
+        let aclk_npu0 = cru.0.npu_gate_enable(ACLK_NPU0).unwrap();
+        println!("npu gate enable: {}", aclk_npu0);
+        let hclk_npu0 = cru.0.npu_gate_enable(HCLK_NPU0).unwrap();
+        println!("npu gate enable: {}", hclk_npu0);
+        let aclk_npu1 = cru.0.npu_gate_enable(ACLK_NPU1).unwrap();
+        println!("npu gate enable: {}", aclk_npu1);
+        let hclk_npu1 = cru.0.npu_gate_enable(HCLK_NPU1).unwrap();
+        println!("npu gate enable: {}", hclk_npu1);
+        let aclk_npu2 = cru.0.npu_gate_enable(ACLK_NPU2).unwrap();
+        println!("npu gate enable: {}", aclk_npu2);
+        let hclk_npu2 = cru.0.npu_gate_enable(HCLK_NPU2).unwrap();
+        println!("npu gate enable: {}", hclk_npu2);
+        let pclk_npu_grf = cru.0.npu_gate_enable(PCLK_NPU_GRF).unwrap();
+        println!("npu gate enable: {}", pclk_npu_grf);
+
+        let npu = unsafe { core::ptr::read_volatile(npu_addr as *const u32) };
+        println!("npu version: {:#x}", npu);
+
+        info!("test npu cru end");
     }
 }
