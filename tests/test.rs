@@ -14,7 +14,7 @@ mod tests {
         time::since_boot,
     };
     use log::{info, warn};
-    use rk3588_clk::{constant::*, Rk3588Cru};
+    use rk3588_clk::{Rk3588Cru, constant::*};
     use rockchip_pm::PD;
     use sdmmc::emmc::EMmcHost;
     use sdmmc::{
@@ -23,8 +23,8 @@ mod tests {
         set_impl,
     };
 
-    use rockchip_pm::{RockchipPM, RkBoard};
     use core::ptr::NonNull;
+    use rockchip_pm::{RkBoard, RockchipPM};
 
     /// NPU 主电源域
     pub const NPU: PD = PD(8);
@@ -57,7 +57,7 @@ mod tests {
         let sys_npu_grf_ptr = get_device_addr("rockchip,rk3588-npu-grf");
         let npu_addr_ptr = get_device_addr("rockchip,rk3588-rknpu");
         let pmu_addr_ptr = get_device_addr("rockchip,rk3588-pmu");
-        
+
         info!("emmc ptr: {:p}", emmc_addr_ptr);
         info!("clk ptr: {:p}", clk_add_ptr);
         info!("npu grf ptr: {:p}", sys_npu_grf_ptr);

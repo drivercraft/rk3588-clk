@@ -10,6 +10,7 @@ pub mod pll;
 pub mod softrst;
 pub mod tools;
 
+use core::ptr::NonNull;
 use log::{debug, info};
 use tock_registers::interfaces::{Readable, Writeable};
 
@@ -22,7 +23,6 @@ use crate::{
     softrst::SoftRstRegisters,
     tools::{div_round_up, div_to_rate},
 };
-use core::ptr::NonNull;
 
 pub const OFFSET: usize = 0x160;
 
@@ -265,7 +265,7 @@ impl Rk3588Cru {
     }
 
     pub fn npu_set_clk(&self, clk_id: u32, rate: usize) -> Result<usize, ()> {
-        let reg = &self.registers().clksel;
+        let reg: &ClkSelRegisters = &self.registers().clksel;
 
         match clk_id {
             HCLK_NPU_ROOT => {
@@ -440,6 +440,17 @@ impl Rk3588Cru {
         let reg = &self.registers().gate;
 
         match gate_id {
+            CLK_NPUTIMER_ROOT => {
+                // bit 7
+                reg.gate_con29.set((1 << (7 + 16)) | (0 << 7));
+            }
+            CLK_NPU_CM0_RTC => {
+                // bit 0: 掩码在 bit[16], 数据在 bit[0]
+                reg.gate_con30.set((1 << (5 + 16)) | (0 << 5));
+            }
+            HCLK_NPU_ROOT => {
+                reg.gate_con29.set((1 << (0 + 16)) | (0 << 0));
+            }
             ACLK_NPU1 => {
                 // bit 0: 掩码在 bit[16], 数据在 bit[0]
                 reg.gate_con27.set((1 << (0 + 16)) | (0 << 0));
@@ -451,6 +462,10 @@ impl Rk3588Cru {
             ACLK_NPU2 => {
                 // bit 0
                 reg.gate_con28.set((1 << (0 + 16)) | (0 << 0));
+            }
+            HCLK_NPU_CM0_ROOT => {
+                // bit 2
+                reg.gate_con30.set((1 << (1 + 16)) | (0 << 1));
             }
             HCLK_NPU2 => {
                 // bit 2
@@ -483,6 +498,13 @@ impl Rk3588Cru {
             HCLK_NPU0 => {
                 // bit 8
                 reg.gate_con30.set((1 << (8 + 16)) | (0 << 8));
+            }
+            CLK_NPU_DSU0 => {
+                // bit 5
+                reg.gate_con29.set((1 << (1 + 16)) | (0 << 1));
+            }
+            PCLK_NPU_ROOT => {
+                reg.gate_con29.set((1 << (4 + 16)) | (0 << 4));
             }
             PCLK_NPU_TIMER => {
                 // bit 6
@@ -517,6 +539,17 @@ impl Rk3588Cru {
         let reg = &self.registers().gate;
 
         match gate_id {
+            CLK_NPUTIMER_ROOT => {
+                // CLK_GATE_SET_TO_DISABLE: 写1禁用
+                reg.gate_con29.set((1 << (7 + 16)) | (1 << 7));
+            }
+            CLK_NPU_CM0_RTC => {
+                // CLK_GATE_SET_TO_DISABLE: 写1禁用
+                reg.gate_con30.set((1 << (5 + 16)) | (1 << 5));
+            }
+            HCLK_NPU_ROOT => {
+                reg.gate_con29.set((1 << (0 + 16)) | (1 << 0));
+            }
             ACLK_NPU1 => {
                 // CLK_GATE_SET_TO_DISABLE: 写1禁用
                 reg.gate_con27.set((1 << (0 + 16)) | (1 << 0));
@@ -526,6 +559,9 @@ impl Rk3588Cru {
             }
             ACLK_NPU2 => {
                 reg.gate_con28.set((1 << (0 + 16)) | (1 << 0));
+            }
+            HCLK_NPU_CM0_ROOT => {
+                reg.gate_con30.set((1 << (1 + 16)) | (1 << 1));
             }
             HCLK_NPU2 => {
                 reg.gate_con28.set((1 << (2 + 16)) | (1 << 2));
@@ -550,6 +586,12 @@ impl Rk3588Cru {
             }
             HCLK_NPU0 => {
                 reg.gate_con30.set((1 << (8 + 16)) | (1 << 8));
+            }
+            CLK_NPU_DSU0 => {
+                reg.gate_con29.set((1 << (1 + 16)) | (1 << 1));
+            }
+            PCLK_NPU_ROOT => {
+                reg.gate_con29.set((1 << (4 + 16)) | (1 << 4));
             }
             PCLK_NPU_TIMER => {
                 reg.gate_con29.set((1 << (6 + 16)) | (1 << 6));
@@ -581,6 +623,21 @@ impl Rk3588Cru {
         // 读取对应寄存器的低16位，检查对应bit
         // 根据 CLK_GATE_SET_TO_DISABLE: bit=0表示使能，bit=1表示禁用
         let is_enabled = match gate_id {
+            CLK_NPUTIMER_ROOT => {
+                let val = reg.gate_con29.get();
+                info!("gate_con29 value: {:#x}", val);
+                (val & (1 << 7)) == 0 // bit[7]=0 表示使能
+            }
+            CLK_NPU_CM0_RTC => {
+                let val = reg.gate_con30.get();
+                info!("gate_con30 value: {:#x}", val);
+                (val & (1 << 5)) == 0 // bit[5]=0 表示使能
+            }
+            HCLK_NPU_ROOT => {
+                let val = reg.gate_con29.get();
+                info!("gate_con29 value: {:#x}", val);
+                (val & (1 << 0)) == 0 // bit[0]=0 表示使能
+            }
             ACLK_NPU1 => {
                 let val = reg.gate_con27.get();
                 info!("gate_con27 value: {:#x}", val);
@@ -595,6 +652,11 @@ impl Rk3588Cru {
                 let val = reg.gate_con28.get();
                 info!("gate_con28 value: {:#x}", val);
                 (val & (1 << 0)) == 0
+            }
+            HCLK_NPU_CM0_ROOT => {
+                let val = reg.gate_con30.get();
+                info!("gate_con30 value: {:#x}", val);
+                (val & (1 << 1)) == 0
             }
             HCLK_NPU2 => {
                 let val = reg.gate_con28.get();
@@ -635,6 +697,16 @@ impl Rk3588Cru {
                 let val = reg.gate_con30.get();
                 info!("gate_con30 value: {:#x}", val);
                 (val & (1 << 8)) == 0
+            }
+            CLK_NPU_DSU0 => {
+                let val = reg.gate_con29.get();
+                info!("gate_con29 value: {:#x}", val);
+                (val & (1 << 1)) == 0
+            }
+            PCLK_NPU_ROOT => {
+                let val = reg.gate_con29.get();
+                info!("gate_con29 value: {:#x}", val);
+                (val & (1 << 4)) == 0
             }
             PCLK_NPU_TIMER => {
                 let val = reg.gate_con29.get();
