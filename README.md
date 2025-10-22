@@ -1,15 +1,10 @@
-# RK3588 CRU 驱动库
+# RK3588 CRU 驱动库 🦀
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white" alt="Rust">
-  <img src="https://img.shields.io/badge/RK3588-FF5722?style=for-the-badge&logo=arm&logoColor=white" alt="RK3588">
-  <img src="https://img.shields.io/badge/No_std-0078D6?style=for-the-badge&logo=npm&logoColor=white" alt="No_std">
-  <img src="https://img.shields.io/badge/U--Boot-000000?style=for-the-badge&logo=linux&logoColor=white" alt="U-Boot">
-</p>
 
-<p align="center">
-  <strong>专为 RK3588 芯片设计的高性能时钟控制单元驱动库</strong>
-</p>
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Rust](https://img.shields.io/badge/rust-2024+-orange.svg)](https://www.rust-lang.org/)
+[![Platform](https://img.shields.io/badge/platform-ARM64-green.svg)](#)
+
 
 ---
 
@@ -71,7 +66,7 @@ cargo install ostool
 
 ```toml
 [dependencies]
-rk3588-clk = "0.1.0"
+rk3588-clk = { git = "https://github.com/drivercraft/rk3588-clk.git" }
 ```
 
 ### 基本使用
