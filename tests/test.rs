@@ -15,7 +15,7 @@ mod tests {
     };
     use log::{info, warn};
     use rk3588_clk::{Rk3588Cru, constant::*};
-    use rockchip_pm::PD;
+    use rockchip_pm::PowerDomain;
     use sdmmc::emmc::EMmcHost;
     use sdmmc::{
         Kernel,
@@ -26,14 +26,14 @@ mod tests {
     use core::ptr::NonNull;
     use rockchip_pm::{RkBoard, RockchipPM};
 
-    /// NPU 主电源域
-    pub const NPU: PD = PD(8);
-    /// NPU TOP 电源域  
-    pub const NPUTOP: PD = PD(9);
-    /// NPU1 电源域
-    pub const NPU1: PD = PD(10);
-    /// NPU2 电源域
-    pub const NPU2: PD = PD(11);
+    /// NPU 主电源域 (dt-binding 索引 8)
+    pub const NPU: PowerDomain = PowerDomain(8);
+    /// NPU TOP 电源域 (索引 9)
+    pub const NPUTOP: PowerDomain = PowerDomain(9);
+    /// NPU1 电源域 (索引 10)
+    pub const NPU1: PowerDomain = PowerDomain(10);
+    /// NPU2 电源域 (索引 11)
+    pub const NPU2: PowerDomain = PowerDomain(11);
 
     struct SKernel;
 
@@ -281,7 +281,7 @@ mod tests {
 
     struct NpuInfo {
         base: NonNull<u8>,
-        domains: Vec<PD>,
+        domains: Vec<PowerDomain>,
     }
 
     fn get_npu_info() -> NpuInfo {
@@ -312,7 +312,7 @@ mod tests {
         let pd_ls = pd_prop.u32_list().collect::<Vec<_>>();
         for pd in pd_ls.chunks(2) {
             let phandle = pd[0];
-            let pd = PD::from(pd[1]);
+            let pd = PowerDomain::from(pd[1]);
             let pm_node = node
                 .fdt()
                 .get_node_by_phandle(phandle.into())
