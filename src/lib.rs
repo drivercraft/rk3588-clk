@@ -1,3 +1,53 @@
+//! Clock driver for RK3588
+//!
+//! # Overview
+//!
+//! Clock is the heart of synchronous digital systems. All the events in an SoC are
+//! controlled by the active edge of the clock and clock frequency is
+//! often synonymous with throughput and performance.
+//!
+//! ## Clock tree
+//! The clock tree is a hierarchical structure that distributes the clock signal
+//! from a single source to various components in the system. The clock tree is
+//! designed to minimize skew and ensure that all components receive the clock signal
+//! at the same time. The clock tree is typically implemented using a combination of
+//! buffers, inverters, and multiplexers. The clock tree is also responsible for
+//! generating different clock frequencies for different components in the system.
+//!
+//! ## CRU
+//! The Clock Reset Unit (CRU) is responsible for managing the clock and reset signals
+//! for the various components in the RK3588 SoC. The CRU is responsible for generating
+//! the clock signals for the CPU, GPU, NPU, and other peripherals. The CRU is also
+//! responsible for managing the reset signals for the various components in the RK3588 SoC.
+//!
+//! # About the driver
+//!
+//! The driver is designed to be used in a no_std environment, and provides
+//! abstractions for configuring clocks on the RK3588 SoC. It supports:
+//!
+//! - MMC (eMMC/SDIO) clock configuration
+//! - NPU clock gate control
+//! - USB clock management
+//! - PLL clock management
+//!
+//! ## Usage
+//!
+//! ```rust,ignore
+//! use rk3588_clk::{Rk3588Cru, constant::*};
+//! use core::ptr::NonNull;
+//!
+//! let cru = Rk3588Cru::new(NonNull::new(clk_addr as *mut u8).unwrap());
+//!
+//! // Get clock frequency
+//! let rate = cru.mmc_get_clk(CCLK_EMMC)?;
+//!
+//! // Set clock frequency
+//! cru.mmc_set_clk(CCLK_EMMC, 200_000_000)?;
+//!
+//! // Enable NPU clock gates
+//! cru.npu_gate_enable(ACLK_NPU0)?;
+//! ```
+//!
 #![no_std]
 
 extern crate alloc;
@@ -44,6 +94,10 @@ pub const ACLK_TOP_ROOT_HZ: usize = 594 * 1000 * 1000;
 pub const PCLK_TOP_ROOT_HZ: usize = 100 * 1000 * 1000;
 pub const ACLK_LOW_TOP_ROOT_HZ: usize = 396 * 1000 * 1000;
 
+/// RK3588 Clock and Reset Unit (CRU) driver
+///
+/// This struct provides an interface to configure and manage clocks on the RK3588 SoC.
+/// It uses memory-mapped I/O to access the CRU registers.
 pub struct Rk3588Cru {
     addr: NonNull<u8>,
     cpll_hz: usize,
@@ -51,6 +105,15 @@ pub struct Rk3588Cru {
 }
 
 impl Rk3588Cru {
+    /// Create a new CRU driver instance
+    ///
+    /// # Arguments
+    ///
+    /// * `addr` - Base address of the CRU registers
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that `addr` points to valid memory-mapped CRU registers.
     pub fn new(addr: NonNull<u8>) -> Self {
         Self {
             addr,
@@ -59,14 +122,32 @@ impl Rk3588Cru {
         }
     }
 
+    /// Initialize the CRU
+    ///
+    /// This function can be extended to perform any necessary initialization
+    /// of the CRU hardware.
     pub fn init(&self) {
         // Initialize the CRU if needed
     }
 
+    /// Get a reference to the CRU registers
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that the underlying memory is valid for the lifetime of the returned reference.
     pub fn registers(&self) -> &Rk3588CruRegisters {
         unsafe { &*(self.addr.as_ptr().add(OFFSET) as *const Rk3588CruRegisters) }
     }
 
+    /// Get the current clock frequency for a MMC clock ID
+    ///
+    /// # Arguments
+    ///
+    /// * `clk_id` - The clock identifier (e.g., `CCLK_EMMC`, `CCLK_SRC_SDIO`)
+    ///
+    /// # Returns
+    ///
+    /// Returns the clock frequency in Hz, or an error if the clock ID is unsupported.
     pub fn mmc_get_clk(&self, clk_id: u32) -> Result<usize, ()> {
         debug!("Getting clk_id {}", clk_id);
 
@@ -105,6 +186,16 @@ impl Rk3588Cru {
         }
     }
 
+    /// Set the clock frequency for a MMC clock ID
+    ///
+    /// # Arguments
+    ///
+    /// * `clk_id` - The MMC clock identifier (e.g., `CCLK_EMMC`, `CCLK_SRC_SDIO`)
+    /// * `rate` - Target clock frequency in Hz
+    ///
+    /// # Returns
+    ///
+    /// Returns the actual clock frequency that was set, or an error if the clock ID is unsupported.
     pub fn mmc_set_clk(&self, clk_id: u32, rate: usize) -> Result<usize, ()> {
         debug!("Setting clk_id {} to rate {}", clk_id, rate);
 
@@ -166,6 +257,9 @@ impl Rk3588Cru {
     }
 }
 
+/// CRU register layout for RK3588
+///
+/// This struct represents the memory-mapped register layout of the Clock Reset Unit.
 #[repr(C)]
 pub struct Rk3588CruRegisters {
     v0pll: V0pllRegisters, // 0x160

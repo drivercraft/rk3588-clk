@@ -1,8 +1,31 @@
+//! NPU clock configuration for RK3588
+//!
+//! This module provides functions to configure and control clocks for the Neural Processing Unit (NPU).
+//! The RK3588 includes multiple NPU instances (NPU0, NPU1, NPU2) that require careful clock configuration.
+
 use crate::{Rk3588Cru, constant::*};
 use log::{debug, info};
 use tock_registers::interfaces::{Readable, Writeable};
 
 impl Rk3588Cru {
+    /// Get the current clock frequency for a NPU clock ID
+    ///
+    /// # Arguments
+    ///
+    /// * `clk_id` - The NPU clock identifier (e.g., `HCLK_NPU_ROOT`, `CLK_NPU_DSU0`, `PCLK_NPU_ROOT`)
+    ///
+    /// # Returns
+    ///
+    /// Returns the clock frequency in Hz, or an error if the clock ID is unsupported.
+    ///
+    /// # Supported Clock IDs
+    ///
+    /// - `HCLK_NPU_ROOT` - NPU HCLK root clock
+    /// - `CLK_NPU_DSU0` - NPU DSU0 clock
+    /// - `PCLK_NPU_ROOT` - NPU PCLK root clock
+    /// - `HCLK_NPU_CM0_ROOT` - NPU CM0 HCLK root clock
+    /// - `CLK_NPU_CM0_RTC` - NPU CM0 RTC clock
+    /// - `CLK_NPUTIMER_ROOT` - NPU timer root clock
     pub fn npu_get_clk(&self, clk_id: u32) -> Result<usize, ()> {
         let reg = &self.registers().clksel;
 
@@ -100,6 +123,16 @@ impl Rk3588Cru {
         Ok(rate)
     }
 
+    /// Set the clock frequency for a NPU clock ID
+    ///
+    /// # Arguments
+    ///
+    /// * `clk_id` - The NPU clock identifier
+    /// * `rate` - Target clock frequency in Hz
+    ///
+    /// # Returns
+    ///
+    /// Returns the actual clock frequency that was set, or an error if the clock ID is unsupported.
     pub fn npu_set_clk(&self, clk_id: u32, rate: usize) -> Result<usize, ()> {
         let reg = &self.registers().clksel;
 
@@ -271,6 +304,15 @@ impl Rk3588Cru {
         }
     }
 
+    /// Enable a NPU clock gate
+    ///
+    /// # Arguments
+    ///
+    /// * `gate_id` - The NPU gate identifier to enable
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(true)` if the gate is enabled, or an error message if the gate ID is unknown.
     pub fn npu_gate_enable(&self, gate_id: u32) -> Result<bool, &'static str> {
         debug!("Enabling gate_id {}", gate_id);
         let reg = &self.registers().gate;
@@ -370,6 +412,15 @@ impl Rk3588Cru {
         self.npu_gate_status(gate_id)
     }
 
+    /// Disable a NPU clock gate
+    ///
+    /// # Arguments
+    ///
+    /// * `gate_id` - The NPU gate identifier to disable
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(true)` on success, or an error if the gate ID is unsupported.
     pub fn npu_gate_disable(&self, gate_id: u32) -> Result<bool, ()> {
         debug!("Disabling gate_id {}", gate_id);
         let reg = &self.registers().gate;
@@ -452,6 +503,15 @@ impl Rk3588Cru {
         Ok(true)
     }
 
+    /// Get the status of a NPU clock gate
+    ///
+    /// # Arguments
+    ///
+    /// * `gate_id` - The NPU gate identifier to check
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(true)` if the gate is enabled, `Ok(false)` if disabled, or an error message if the gate ID is unknown.
     pub fn npu_gate_status(&self, gate_id: u32) -> Result<bool, &'static str> {
         debug!("Getting status for gate_id {}", gate_id);
         let reg = &self.registers().gate;

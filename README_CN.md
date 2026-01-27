@@ -1,169 +1,169 @@
-# RK3588 CRU Driver Library 🦀
+# RK3588 CRU 驱动库 🦀
 
 
-|[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-|[![Rust](https://img.shields.io/badge/rust-2024+-orange.svg)](https://www.rust-lang.org/)
-|[![Platform](https://img.shields.io/badge/platform-ARM64-green.svg)](#)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Rust](https://img.shields.io/badge/rust-2024+-orange.svg)](https://www.rust-lang.org/)
+[![Platform](https://img.shields.io/badge/platform-ARM64-green.svg)](#)
 
 
 ---
 
-## 📋 Table of Contents
+## 📋 目录
 
-- [Project Introduction](#project-introduction)
-- [Features](#features)
-- [Quick Start](#quick-start)
-  - [Requirements](#requirements)
-  - [Installation](#installation)
-  - [Basic Usage](#basic-usage)
-- [Project Structure](#project-structure)
-- [API Documentation](#api-documentation)
-- [Usage Examples](#usage-examples)
-- [Test Results](#test-results)
-- [License](#license)
-
----
-
-## 📖 Project Introduction
-
-RK3588 CRU (Clock and Reset Unit) driver library is a Rust clock control unit driver library specifically designed for the RK3588 chip. This library provides comprehensive clock management functionality, including MMC (Memory Card Controller) clock configuration, NPU (Neural Processing Unit) clock management, and clock gating features.
-
-This project uses a `no_std` design, making it fully suitable for bare-metal and embedded environments, with special optimizations for U-Boot bootloader environments. Through type-safe register access based on `tock-registers`, it ensures the reliability and security of hardware operations.
+- [项目简介](#项目简介)
+- [功能特性](#功能特性)
+- [快速开始](#快速开始)
+  - [环境要求](#环境要求)
+  - [安装步骤](#安装步骤)
+  - [基本使用](#基本使用)
+- [项目结构](#项目结构)
+- [API 文档](#api-文档)
+- [使用示例](#使用示例)
+- [测试结果](#测试结果)
+- [许可证](#许可证)
 
 ---
 
-## ✨ Features
+## 📖 项目简介
 
-- **Complete MMC Clock Support**: Supports clock configuration and frequency management for storage controllers such as EMMC, SDIO, and SFC
-- **NPU Clock Management**: Provides comprehensive NPU clock control, including frequency setting, gate enable, and status monitoring
-- **Clock Gating**: Precise control over the enable/disable status of clock gates for various modules to optimize power management
-- **Type-Safe Register Access**: Provides type-safe hardware register operations based on `tock-registers`
-- **no_std Compatible**: Completely independent of the standard library, suitable for bare-metal and embedded environments
-- **ARM64 Architecture Optimization**: Specifically optimized for the RK3588 ARM64 platform
-- **U-Boot Environment Support**: Provides stable and reliable clock management features in U-Boot bootloader environment
-- **Rich Clock Source Support**: Supports multiple clock sources such as PLL and OSC, with flexible divider configurations
+RK3588 CRU (Clock and Reset Unit) 驱动库是一个专为 RK3588 芯片设计的 Rust 时钟控制单元驱动库。该库提供了完整的时钟管理功能，包括 MMC 存储控制器时钟配置、NPU (神经网络处理单元) 时钟管理以及时钟门控等功能。
+
+本项目采用 `no_std` 设计，完全适用于裸机和嵌入式环境，特别针对 U-Boot 引导加载程序环境进行了优化。通过基于 `tock-registers` 的类型安全寄存器访问，确保了硬件操作的可靠性和安全性。
 
 ---
 
-## 🚀 Quick Start
+## ✨ 功能特性
 
-### Requirements
+- **完整的 MMC 时钟支持**: 支持 EMMC、SDIO、SFC 等存储控制器的时钟配置和频率管理
+- **NPU 时钟管理**: 提供全面的 NPU 时钟控制，包括频率设置、门控使能和状态监控
+- **时钟门控功能**: 精确控制各个模块的时钟使能/禁用状态，优化功耗管理
+- **类型安全寄存器访问**: 基于 `tock-registers` 提供类型安全的硬件寄存器操作
+- **no_std 兼容**: 完全不依赖标准库，适用于裸机和嵌入式环境
+- **ARM64 架构优化**: 专门针对 RK3588 ARM64 平台进行优化
+- **U-Boot 环境支持**: 在 U-Boot 引导环境下提供稳定可靠的时钟管理功能
+- **丰富的时钟源支持**: 支持 PLL、OSC 等多种时钟源和灵活的分频配置
+
+---
+
+## 🚀 快速开始
+
+### 环境要求
 
 - Rust 2024 Edition
-- ARM64 development environment
-- RK3588 hardware platform with U-Boot support
-- ostool (for testing)
+- ARM64 开发环境
+- 支持 U-Boot 的 RK3588 硬件平台
+- ostool 工具 (用于测试)
 
-### Installation
+### 安装步骤
 
-1. Install the `ostool` dependency:
+1. 安装 `ostool` 依赖工具：
 
 ```bash
 cargo install ostool
 ```
 
-2. Add the project to your `Cargo.toml`:
+2. 将项目添加到 `Cargo.toml`：
 
 ```toml
 [dependencies]
 rk3588-clk = { git = "https://github.com/drivercraft/rk3588-clk.git" }
 ```
 
-### Basic Usage
+### 基本使用
 
 ```rust
 use rk3588_clk::{Rk3588Cru, constant::*};
 use core::ptr::NonNull;
 
-// Create CRU instance
-let cru_addr = 0xfd7c0000; // RK3588 CRU base address
+// 创建 CRU 实例
+let cru_addr = 0xfd7c0000; // RK3588 CRU 基地址
 let cru = Rk3588Cru::new(NonNull::new(cru_addr as *mut u8).unwrap());
 
-// Initialize CRU
+// 初始化 CRU
 cru.init();
 
-// Configure EMMC clock frequency
+// 配置 EMMC 时钟频率
 let emmc_rate = 200_000_000; // 200MHz
 match cru.mmc_set_clk(CCLK_EMMC, emmc_rate) {
-    Ok(actual_rate) => println!("EMMC clock set to: {} Hz", actual_rate),
-    Err(_) => println!("EMMC clock setting failed"),
+    Ok(actual_rate) => println!("EMMC 时钟设置为: {} Hz", actual_rate),
+    Err(_) => println!("EMMC 时钟设置失败"),
 }
 
-// Enable NPU clock gate
+// 使能 NPU 时钟门控
 match cru.npu_gate_enable(ACLK_NPU0) {
-    Ok(enabled) => println!("NPU ACLK0 gate status: {}", enabled),
-    Err(e) => println!("NPU gate enable failed: {}", e),
+    Ok(enabled) => println!("NPU ACLK0 门控状态: {}", enabled),
+    Err(e) => println!("NPU 门控使能失败: {}", e),
 }
 ```
 
 ---
 
-## 📁 Project Structure
+## 📁 项目结构
 
 ```
 src/
-├── lib.rs              # Main entry and Rk3588Cru struct definition
-├── autocs.rs           # Automatic clock selection functionality
-├── clksel.rs           # Clock selection register definitions
-├── constant.rs         # Hardware constants and clock ID definitions
-├── gate.rs             # Clock gate control registers
-├── pll.rs              # PLL phase-locked loop control registers
-├── softrst.rs          # Software reset registers
-└── tools.rs            # Utility functions (divider calculations, etc.)
+├── lib.rs              # 主入口和 Rk3588Cru 结构体定义
+├── autocs.rs           # 自动时钟选择功能
+├── clksel.rs           # 时钟选择寄存器定义
+├── constant.rs         # 硬件常量和时钟 ID 定义
+├── gate.rs             # 时钟门控制寄存器
+├── pll.rs              # PLL 锁相环控制寄存器
+├── softrst.rs          # 软件复位寄存器
+└── tools.rs            # 工具函数 (分频计算等)
 
 tests/
-└── test.rs             # Integration tests, including MMC and NPU functionality tests
+└── test.rs             # 集成测试，包含 MMC 和 NPU 功能测试
 ```
 
 ---
 
-## 📚 API Documentation
+## 📚 API 文档
 
-### Core Structures
+### 核心结构体
 
-- **`Rk3588Cru`**: Main CRU interface structure providing all clock control functions
-- **`Rk3588CruRegisters`**: CRU register mapping structure containing all hardware register definitions
+- **`Rk3588Cru`**: 主要的 CRU 接口结构体，提供所有时钟控制功能
+- **`Rk3588CruRegisters`**: CRU 寄存器映射结构体，包含所有硬件寄存器定义
 
-### Main Interfaces
+### 主要接口
 
-#### MMC Clock Control
+#### MMC 时钟控制
 
-- `Rk3588Cru::new(addr)`: Create a new CRU instance
-- `Rk3588Cru::init()`: Initialize CRU
-- `Rk3588Cru::mmc_get_clk(clk_id)`: Get the current frequency of the specified MMC clock
-- `Rk3588Cru::mmc_set_clk(clk_id, rate)`: Set the frequency of the specified MMC clock
+- `Rk3588Cru::new(addr)`: 创建新的 CRU 实例
+- `Rk3588Cru::init()`: 初始化 CRU
+- `Rk3588Cru::mmc_get_clk(clk_id)`: 获取指定 MMC 时钟的当前频率
+- `Rk3588Cru::mmc_set_clk(clk_id, rate)`: 设置指定 MMC 时钟的频率
 
-**Supported MMC Clock IDs:**
-- `CCLK_EMMC`: EMMC controller clock
-- `CCLK_SRC_SDIO`: SDIO controller clock
-- `SCLK_SFC`: SFC (SPI Flash Controller) clock
-- `BCLK_EMMC`: EMMC bus clock
+**支持的 MMC 时钟 ID:**
+- `CCLK_EMMC`: EMMC 控制器时钟
+- `CCLK_SRC_SDIO`: SDIO 控制器时钟
+- `SCLK_SFC`: SFC (SPI Flash Controller) 时钟
+- `BCLK_EMMC`: EMMC 总线时钟
 
-#### NPU Clock Management
+#### NPU 时钟管理
 
-- `Rk3588Cru::npu_get_clk(clk_id)`: Get NPU clock frequency
-- `Rk3588Cru::npu_set_clk(clk_id, rate)`: Set NPU clock frequency
-- `Rk3588Cru::npu_gate_enable(gate_id)`: Enable NPU clock gate
-- `Rk3588Cru::npu_gate_disable(gate_id)`: Disable NPU clock gate
-- `Rk3588Cru::npu_gate_status(gate_id)`: Query NPU clock gate status
+- `Rk3588Cru::npu_get_clk(clk_id)`: 获取 NPU 时钟频率
+- `Rk3588Cru::npu_set_clk(clk_id, rate)`: 设置 NPU 时钟频率
+- `Rk3588Cru::npu_gate_enable(gate_id)`: 使能 NPU 时钟门控
+- `Rk3588Cru::npu_gate_disable(gate_id)`: 禁用 NPU 时钟门控
+- `Rk3588Cru::npu_gate_status(gate_id)`: 查询 NPU 时钟门控状态
 
-**Supported NPU Clock IDs:**
-- `HCLK_NPU_ROOT`: NPU root clock
-- `CLK_NPU_DSU0`: NPU DSU0 clock
-- `PCLK_NPU_ROOT`: NPU peripheral clock
-- `CLK_NPUTIMER_ROOT`: NPU timer clock
+**支持的 NPU 时钟 ID:**
+- `HCLK_NPU_ROOT`: NPU 根时钟
+- `CLK_NPU_DSU0`: NPU DSU0 时钟
+- `PCLK_NPU_ROOT`: NPU 外设时钟
+- `CLK_NPUTIMER_ROOT`: NPU 定时器时钟
 
-**Supported NPU Gate IDs:**
-- `ACLK_NPU0/1/2`: NPU module ACLK clocks
-- `HCLK_NPU0/1/2`: NPU module HCLK clocks
-- `PCLK_NPU_*`: NPU peripheral clocks
-- `CLK_NPUTIMER*`: NPU timer clocks
+**支持的 NPU 门控 ID:**
+- `ACLK_NPU0/1/2`: NPU 各模块 ACLK
+- `HCLK_NPU0/1/2`: NPU 各模块 HCLK
+- `PCLK_NPU_*`: NPU 外设时钟
+- `CLK_NPUTIMER*`: NPU 定时器时钟
 
 ---
 
-## 💡 Usage Examples
+## 💡 使用示例
 
-### MMC Clock Control Example
+### MMC 时钟控制示例
 
 ```rust
 use rk3588_clk::{Rk3588Cru, constant::*};
@@ -171,31 +171,31 @@ use core::ptr::NonNull;
 
 fn configure_emmc_clock(cru: &Rk3588Cru) -> Result<(), &'static str> {
 
-    // Set EMMC clock to 200MHz
+    // 设置 EMMC 时钟为 200MHz
     let target_rate = 200_000_000;
     match cru.mmc_set_clk(CCLK_EMMC, target_rate) {
         Ok(actual_rate) => {
-            println!("EMMC clock set successfully: {} Hz", actual_rate);
+            println!("EMMC 时钟设置成功: {} Hz", actual_rate);
 
-            // Verify clock setting
+            // 验证时钟设置
             match cru.mmc_get_clk(CCLK_EMMC) {
                 Ok(read_rate) => {
-                    println!("EMMC clock read: {} Hz", read_rate);
+                    println!("EMMC 时钟读取: {} Hz", read_rate);
                     if read_rate == actual_rate {
-                        println!("Clock setting verification successful");
+                        println!("时钟设置验证成功");
                     }
                 }
-                Err(e) => return Err("Clock read failed"),
+                Err(e) => return Err("时钟读取失败"),
             }
         }
-        Err(e) => return Err("Clock setting failed"),
+        Err(e) => return Err("时钟设置失败"),
     }
 
     Ok(())
 }
 ```
 
-### NPU Clock Management Example
+### NPU 时钟管理示例
 
 ```rust
 use rk3588_clk::{Rk3588Cru, constant::*};
@@ -203,7 +203,7 @@ use core::ptr::NonNull;
 
 fn configure_npu_clocks(cru: &Rk3588Cru) -> Result<(), &'static str> {
 
-    // Enable NPU-related clock gates
+    // 使能 NPU 相关的时钟门控
     let npu_gates = [
         ACLK_NPU0, HCLK_NPU0,
         ACLK_NPU1, HCLK_NPU1,
@@ -214,66 +214,66 @@ fn configure_npu_clocks(cru: &Rk3588Cru) -> Result<(), &'static str> {
     for &gate_id in &npu_gates {
         match cru.npu_gate_enable(gate_id) {
             Ok(enabled) => {
-                println!("Gate {} enable status: {}", gate_id, enabled);
+                println!("门控 {} 使能状态: {}", gate_id, enabled);
                 if !enabled {
-                    return Err("Gate enable failed");
+                    return Err("门控使能失败");
                 }
             }
-            Err(e) => return Err("Gate operation failed"),
+            Err(e) => return Err("门控操作失败"),
         }
     }
 
-    // Set NPU root clock to 200MHz
+    // 设置 NPU 根时钟为 200MHz
     match cru.npu_set_clk(HCLK_NPU_ROOT, 200_000_000) {
         Ok(actual_rate) => {
-            println!("NPU root clock set: {} Hz", actual_rate);
+            println!("NPU 根时钟设置: {} Hz", actual_rate);
         }
-        Err(e) => return Err("NPU clock setting failed"),
+        Err(e) => return Err("NPU 时钟设置失败"),
     }
 
-    // Set NPU DSU0 clock to 500MHz
+    // 设置 NPU DSU0 时钟为 500MHz
     match cru.npu_set_clk(CLK_NPU_DSU0, 500_000_000) {
         Ok(actual_rate) => {
-            println!("NPU DSU0 clock set: {} Hz", actual_rate);
+            println!("NPU DSU0 时钟设置: {} Hz", actual_rate);
         }
-        Err(e) => return Err("NPU DSU0 clock setting failed"),
+        Err(e) => return Err("NPU DSU0 时钟设置失败"),
     }
 
-    println!("NPU clock configuration completed");
+    println!("NPU 时钟配置完成");
     Ok(())
 }
 ```
 
-### Complete Usage Example
+### 完整使用示例
 
 ```rust
 use rk3588_clk::{Rk3588Cru, constant::*};
 use core::ptr::NonNull;
 
 fn main() -> Result<(), &'static str> {
-    // Initialize CRU
+    // 初始化 CRU
     let cru_addr = 0xfd7c0000;
     let cru = Rk3588Cru::new(NonNull::new(cru_addr as *mut u8).unwrap());
     cru.init();
 
-    // Configure storage clock
-    println!("Configuring storage clock...");
+    // 配置存储时钟
+    println!("配置存储时钟...");
     if let Err(e) = configure_emmc_clock(&cru) {
-        println!("Storage clock configuration failed: {}", e);
+        println!("存储时钟配置失败: {}", e);
         return Err(e);
     }
 
-    // Configure NPU clock
-    println!("Configuring NPU clock...");
+    // 配置 NPU 时钟
+    println!("配置 NPU 时钟...");
     if let Err(e) = configure_npu_clocks(&cru) {
-        println!("NPU clock configuration failed: {}", e);
+        println!("NPU 时钟配置失败: {}", e);
         return Err(e);
     }
 
-    // Run system clock diagnostics
-    println!("System clock diagnostics:");
+    // 运行系统时钟诊断
+    println!("系统时钟诊断:");
     if let Err(e) = clock_diagnostics(&cru) {
-        println!("Clock diagnostics failed: {}", e);
+        println!("时钟诊断失败: {}", e);
         return Err(e);
     }
 
@@ -281,7 +281,7 @@ fn main() -> Result<(), &'static str> {
 }
 
 fn clock_diagnostics(cru: &Rk3588Cru) -> Result<(), &'static str> {
-    // Check critical clock status
+    // 检查关键时钟状态
     let critical_clocks = [
         (CCLK_EMMC, "EMMC"),
         (HCLK_NPU_ROOT, "NPU_ROOT"),
@@ -290,8 +290,8 @@ fn clock_diagnostics(cru: &Rk3588Cru) -> Result<(), &'static str> {
 
     for &(clk_id, name) in &critical_clocks {
         match cru.npu_get_clk(clk_id) {
-            Ok(rate) => println!("{} clock: {} Hz", name, rate),
-            Err(_) => println!("{} clock read failed", name),
+            Ok(rate) => println!("{} 时钟: {} Hz", name, rate),
+            Err(_) => println!("{} 时钟读取失败", name),
         }
     }
 
@@ -301,29 +301,29 @@ fn clock_diagnostics(cru: &Rk3588Cru) -> Result<(), &'static str> {
 
 ---
 
-## 🧪 Test Results
+## 🧪 测试结果
 
-### Running Tests
+### 运行测试
 
-#### Hardware Testing with U-Boot Environment
+#### 带U-Boot环境的硬件测试
 
 ```bash
-# Test with U-Boot enabled development board
+# 带uboot的开发板测试
 cargo test --test test -- tests --show-output --uboot
 ```
 
-### Test Output Example
+### 测试输出示例
 
 <details>
-<summary>Click to view test results</summary>
+<summary>点击查看测试结果</summary>
 
 ```
      _____                                         __
     / ___/ ____   ____ _ _____ _____ ___   ____ _ / /
-    \__ \ / __ \ / __ `// ___// ___// _ \ / __ `// /
-   ___/ // /_/ // /_/ // /   / /   /  __// /_/ // /
-  /____// .___/ \__,_//_/   /_/    \___/ \__,_//_/
-       /_/
+    \__ \ / __ \ / __ `// ___// ___// _ \ / __ `// / 
+   ___/ // /_/ // /_/ // /   / /   /  __// /_/ // /  
+  /____// .___/ \__,_//_/   /_/    \___/ \__,_//_/   
+       /_/                                           
 
 Version                       : 0.12.2
 Platfrom                      : RK3588 OPi 5 Plus
@@ -531,7 +531,7 @@ nse: 0xff8080
 🔍 19.112s    [sdmmc::emmc::cmd:263] Response Status: 0b1
 🔍 19.112s    [sdmmc::emmc::cmd:288] Command completed: status=0b1
 🔍 19.113s    [sdmmc::emmc::cmd:339] Data transfer: cmd.data_present=true
-🔍 19.114s    [sdmmc::emmc:354] EXT_CSD: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 3, 0, 144, 23, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 146, 4, 0, 7, 0, 0, 2, 0, 0, 21, 31, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 13, 0, 0, 0, 0, 8, 0, 2, 0, 87, 31, 10, 3, 221, 221, 0, 0, 0, 10, 10, 10, 10, 10, 10, 1, 0, 224, 163, 3, 23, 19, 23, 7, 7, 16, 1, 3, 1, 8, 32, 0, 7, 166, 166, 85, 3, 0, 0, 0, 0, 221, 221, 0, 1, 255, 0, 0, 0, 0, 1, 25, 25, 0, 16, 0, 0, 221, 82, 67, 51, 48, 66, 48, 48, 55, 81, 80, 8, 8, 8, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 31, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 16, 0, 3, 3, 0, 5, 3, 3, 1, 63, 63, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0]
+🔍 19.114s    [sdmmc::emmc:354] EXT_CSD: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 3, 0, 144, 23, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 146, 4, 0, 7, 0, 0, 2, 0, 0, 21, 31, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 13, 0, 0, 0, 0, 8, 0, 2, 0, 87, 31, 10, 3, 221, 221, 0, 0, 0, 10, 10, 10, 10, 10, 10, 1, 0, 224, 163, 3, 23, 19, 23, 7, 7, 16, 1, 3, 1, 8, 32, 0, 7, 166, 166, 85, 3, 0, 0, 0, 0, 221, 221, 0, 1, 255, 0, 0, 0, 0, 1, 25, 25, 0, 16, 0, 0, 221, 82, 67, 51, 48, 66, 48, 48, 55, 81, 80, 8, 8, 8, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 31, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 16, 0, 3, 3, 0, 5, 3, 3, 1, 63, 63, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0]
 🐛 19.128s    [sdmmc::emmc:412] Boot partition size: 0x400000
 🐛 19.128s    [sdmmc::emmc:413] RPMB partition size: 0x1000000
 🐛 19.129s    [sdmmc::emmc:434] GP partition sizes: [0, 0, 0, 0]
@@ -628,17 +628,14 @@ nse: 0xff8080
 🔍 19.227s    [sdmmc::emmc::cmd:244] Sending command: opcode=0x15, arg=0x0, resp_type=0x15, command=0x153a
 🔍 19.228s    [sdmmc::emmc::cmd:263] Response Status: 0b0
 🔍 19.229s    [sdmmc::emmc::cmd:263] Response Status: 0b100000
-🔍 19.229s    [sdmmc::emmc::cmd:288] Command completed: status=0b100000
+🔍 19s    [sdmmc::emmc::cmd:288] Command completed: status=0b100000
 🔍 19.230s    [sdmmc::emmc::cmd:244] Sending command: opcode=0x15, arg=0x0, resp_type=0x15, command=0x153a
 🔍 19.231s    [sdmmc::emmc::cmd:263] Response Status: 0b0
 🔍 19.232s    [sdmmc::emmc::cmd:263] Response Status: 0b100000
-🔍 19.232s    [sdmmc::emmc::cmd:288] Command completed: status=0b100000
+🔍 19.233s    [sdmmc::emmc::cmd:288] Command completed: status=0b100000
 🔍 19.234s    [sdmmc::emmc::cmd:244] Sending command: opcode=0x15, arg=0x0, resp_type=0x15, command=0x153a
 🔍 19.235s    [sdmmc::emmc::cmd:263] Response Status: 0b0
-🔍 19.235s    [sdmmc::emmc::cmd:263] Response Status: 0b100000
-🔍 19.235s    [sdmmc::emmc::cmd:288] Command completed: status=0b100000
-🔍 19.237s    [sdmmc::emmc::cmd:244] Sending command: opcode=0x15, arg=0x0, resp_type=0x15, command=0x153a
-🔍 19.239s    [sdmmc::emmc::cmd:263] Response Status: 0b0
+🔍 19.235s    [sdmmc::emmmc::cmd:244] Sending command: opcode=0x15, arg=0x0, resp_type=0x    [sdmmc::emmc::cmd:263] Response Status: 0b0
 🔍 19.239s    [sdmmc::emmc::cmd:263] Response Status: 0b100000
 🔍 19.240s    [sdmmc::emmc::cmd:288] Command completed: status=0b100000
 🔍 19.240s    [sdmmc::emmc::cmd:244] Sending command: opcode=0x15, arg=0x0, resp_type=0x15, command=0x153a
@@ -649,7 +646,7 @@ nse: 0xff8080
 🔍 19.245s    [sdmmc::emmc::cmd:263] Response Status: 0b0
 🔍 19.246s    [sdmmc::emmc::cmd:263] Response Status: 0b100000
 🔍 19.246s    [sdmmc::emmc::cmd:288] Command completed: status=0b100000
-🔍 19.247s    [sdmmc::emmc::cmd:244] Sending command: opcode=0x15, arg=0x0, resp_type=0x15, command=0x153a
+🔍 19.247s    [sdmm command: opcode=0x15, arg=0x0, resp_type=0x15, command=0x153a
 🔍 19.252s    [sdmmc::emmc::cmd:263] Response Status: 0b0
 🔍 19.252s    [sdmmc::emmc::cmd:263] Response Status: 0b100000
 🔍 19.253s    [sdmmc::emmc::cmd:288] Command completed: status=0b100000
@@ -673,7 +670,7 @@ nse: 0xff8080
 🔍 19.269s    [sdmmc::emmc::cmd:263] Response Status: 0b0
 🔍 19.269s    [sdmmc::emmc::cmd:263] Response Status: 0b100000
 🔍 19.270s    [sdmmc::emmc::cmd:288] Command completed: status=0b100000
-🔍 19.271s    [sdmmc::emmc::cmd:244] Sending command: opcode=0x15, arg=0x0, resp_type=0x15, command=0x153a
+🔍 19.271s    [sdmmc::emmc::cmd:244] Sending command: opcode=0x15, arg=0x0, resp_typ
 🔍 19.272s    [sdmmc::emmc::cmd:263] Response Status: 0b0
 🔍 19.273s    [sdmmc::emmc::cmd:263] Response Status: 0b100000
 🔍 19.274s    [sdmmc::emmc::cmd:288] Command completed: status=0b100000
@@ -707,28 +704,16 @@ nse: 0xff8080
 🔍 19.297s    [sdmmc::emmc::cmd:288] Command completed: status=0b100000
 🔍 19.298s    [sdmmc::emmc::cmd:244] Sending command: opcode=0x15, arg=0x0, resp_type=0x15, command=0x153a
 🔍 19.299s    [sdmmc::emmc::cmd:263] Response Status: 0b0
-🔍 19.299s    [sdmmc::emmc::cmd:263] Response Status: 0b100000
-🔍 19.300s    [sdmmc::emmc::cmd:288] Command completed: status=0b100000
-🔍 19.301s    [sdmmc::emmc::cmd:244] Sending command: opcode=0x15, arg=0x0, resp_type=0x15, command=0x153a
-🔍 19.303s    [sdmmc::emmc::cmd:263] Response Status: 0b0
-🔍 19.304s    [sdmmc::emmc::cmd:263] Response Status: 0b100000
-🔍 19.304s    [sdmmc::emmc::cmd:288] Command completed: status=0b100000
-🔍 19.305s    [sdmmc::emmc::cmd:244] Sending command: opcode=0x15, arg=0x0, resp_type=0x15, command=0x153a
-🔍 19.306s    [sdmmc::emmc::cmd:263] Response Status: 0b0
-🔍 19.307s    [sdmmc::emmc::cmd:263] Response Status: 0b100000
-🔍 19.307s    [sdmmc::emmc::cmd:288] Command completed: status=0b100000
+🔍 19.300s    [sdmmc::emmc::cmd:263] Response Status: 0b100000
+🔍 19.301s    [sdmmc::emmc::cmd:288] Command completed: status=0b100000
 🔍 19.302s    [sdmmc::emmc::cmd:244] Sending command: opcode=0x15, arg=0x0, resp_type=0x15, command=0x153a
-🔍 19.299s    [sdmmc::emmc::cmd:263] Response Status: 0b0
-🔍 19.299s    [sdmmc::emmc::cmd:263] Response Status: 0b100000
-🔍 19.300s    [sdmmc::emmc::cmd:288] Command completed: status=0b100000
-🔍 19.301s    [sdmmc::emmc::cmd:244] Sending command: opcode=0x15, arg=0x0, resp_type=0x15, command=0x153a
 🔍 19.303s    [sdmmc::emmc::cmd:263] Response Status: 0b0
 🔍 19.304s    [sdmmc::emmc::cmd:263] Response Status: 0b100000
 🔍 19.304s    [sdmmc::emmc::cmd:288] Command completed: status=0b100000
 🔍 19.305s    [sdmmc::emmc::cmd:244] Sending command: opcode=0x15, arg=0x0, resp_type=0x15, command=0x153a
 🔍 19.306s    [sdmmc::emmc::cmd:263] Response Status: 0b0
 🔍 19.307s    [sdmmc::emmc::cmd:263] Response Status: 0b100000
-🔍 19.307s    [sdmmc::emmc::cmd:288] Command completed: status=0b100000
+🔍 19.308s    [sdmmc::emmc::cmd:288] Command completed: status=0b100000
 🔍 19.308s    [sdmmc::emmc::cmd:244] Sending command: opcode=0x15, arg=0x0, resp_type=0x15, command=0x153a
 🔍 19.310s    [sdmmc::emmc::cmd:263] Response Status: 0b0
 🔍 19.310s    [sdmmc::emmc::cmd:263] Response Status: 0b100000
@@ -774,18 +759,17 @@ Successfully wrote to block 3!
 🔍 19.356s    [sdmmc::emmc::cmd:288] Command completed: status=0b100001
 🔍 19.357s    [sdmmc::emmc::cmd:339] Data transfer: cmd.data_present=true
 Successfully read back block 3!
-First 16 bytes of read block: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+First 16 bytes of read block: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 Data verification successful: written and read data match pe2;128;128;128m🔍 19.373s    [sdmmc::emmc::block:383] Reading 4 at address: 0xc8
-🔍 19.374s    [sdmmc::emmc::block:383] Reading 4 blocks starting at address: 0xc8
-🔍 19.375s    [sdmmc::emmc::cmd:244] Sending command: opcode=0x12, arg=0xc8, resp_type=0x15, command=0x123a
-🔍 19.376s    [sdmmc::emmc::cmd:263] Response Status: 0b0
-🔍 19.377s    [sdmmc::emmc::cmd:263] Response Status: 0b100001
-🔍 19.377s    [sdmmc::emmc::cmd:288] Command completed: status=0b100001
-🔍 19.378s    [sdmmc::emmc::cmd:339] Data transfer: cmd.data_present=true
-🔍 19.379s    [sdmmc::emmc::cmd:244] Sending command: opcode=0xc, arg=0x0, resp_type=0x1d, command=0xc1b
-🔍 19.380s    [sdmmc::emmc::cmd:263] Response Status: 0b0
-🔍 19.381s    [sdmmc::emmc::cmd:263] Response Status: 0b11
-🔍 19.382s    [sdmmc::emmc::cmd:288] Command completed: status=0b11
+🔍 19.374s    [sdmmcemmc::cmd:244] Sending command: opcode=0x12, arg=0xc8, resp_type=0x15, command=0x123a
+🔍 19.375s    [sdmmc::emmc::cmd:263] Response Status: 0b0
+🔍 19.376s    [sdmmc::emmc::cmd:263] Response Status: 0b100001
+🔍 19.376s    [sdmmc::emmc::cmd:288] Command completed: status=0b100001
+🔍 19.377s    [sdmmc::emmc::cmd:339] Data transfer: cmd.data_present=true
+🔍 19.378s    [sdmmc::emmc::cmd:244] Sending command: opcode=0xc, arg=0x0, resp_type=0x1d, command=0xc1b
+🔍 19.379s    [sdmmc::emmc::cmd:263] Response Status: 0b0
+🔍 19.380s    [sdmmc::emmc::cmd:263] Response Status: 0b11
+🔍 19.381s    [sdmmc::emmc::cmd:288] Command completed: status=0b11
 Successfully read 4 blocks starting at block address 200!
 First 16 bytes of first block: [A0, 2F, 00, B9, A1, 8B, 0D, A9, A0, 07, 42, A9, A0, 07, 04, A9]
 First 16 bytes of last block: [B5, 01, BD, 01, C6, 01, CE, 01, D6, 01, DE, 01, E7, 01, EF, 01]
@@ -836,10 +820,10 @@ All tests passed
 
 </details>
 
-## 🤝 Contributing
+## 🤝 贡献
 
-Contributions are welcome! Please feel free to submit pull requests or open issues to report bugs and feature requests.
+欢迎贡献！请随时提交拉取请求或开启问题来报告错误和功能请求。
 
-## 📄 License
+## 📄 许可证
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+该项目基于 MIT 许可证 - 详情请见 [LICENSE](LICENSE) 文件。

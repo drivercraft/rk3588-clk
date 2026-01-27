@@ -1,3 +1,8 @@
+//! Integration tests for RK3588 CRU driver
+//!
+//! This module contains tests for verifying clock and reset unit functionality on the RK3588 SoC.
+//! Tests are designed to run on real hardware or QEMU using the bare-test framework.
+
 #![no_std]
 #![no_main]
 #![feature(used_with_arg)]
@@ -35,6 +40,7 @@ mod tests {
     /// NPU2 电源域 (索引 11)
     pub const NPU2: PowerDomain = PowerDomain(11);
 
+    /// Kernel implementation for bare-test framework
     struct SKernel;
 
     impl Kernel for SKernel {
@@ -50,6 +56,7 @@ mod tests {
 
     set_impl!(SKernel);
 
+    /// Main platform test that initializes and tests all peripherals
     #[test]
     fn test_platform() {
         let emmc_addr_ptr = get_device_addr("rockchip,dwcmshc-sdhci");
@@ -88,9 +95,11 @@ mod tests {
         info!("test uboot");
     }
 
+    /// Clock unit wrapper that implements the sdmmc Clk trait
     pub struct ClkUnit(Rk3588Cru);
 
     impl ClkUnit {
+        /// Create a new clock unit from a CRU instance
         pub fn new(cru: Rk3588Cru) -> Self {
             ClkUnit(cru)
         }
@@ -124,6 +133,7 @@ mod tests {
         Ok(())
     }
 
+    /// Test eMMC functionality including initialization, reading, writing, and verification
     fn test_emmc(emmc_addr: usize, clock: usize) {
         // Initialize custom SDHCI controller
         let mut emmc = EMmcHost::new(emmc_addr);
@@ -260,6 +270,7 @@ mod tests {
         println!("SD card test complete");
     }
 
+    /// Test power management for NPU power domains
     fn test_pm(reg: NonNull<u8>) {
         let board = RkBoard::Rk3588;
 
@@ -279,11 +290,14 @@ mod tests {
         }
     }
 
+    /// NPU information including base address and power domains
     struct NpuInfo {
         base: NonNull<u8>,
+        #[allow(dead_code)]
         domains: Vec<PowerDomain>,
     }
 
+    /// Extract NPU information from device tree
     fn get_npu_info() -> NpuInfo {
         let PlatformInfoKind::DeviceTree(fdt) = &global_val().platform_info;
         let fdt = fdt.get();
@@ -325,6 +339,7 @@ mod tests {
         NpuInfo { base, domains }
     }
 
+    /// Get device address from device tree by compatible string
     fn get_device_addr(dtc_str: &str) -> NonNull<u8> {
         let PlatformInfoKind::DeviceTree(fdt) = &global_val().platform_info;
         let fdt = fdt.get();
@@ -347,6 +362,7 @@ mod tests {
         iomap(start.into(), end - start)
     }
 
+    /// Test NPU clock gates by enabling various NPU clocks
     fn test_npu_cru(npu_addr: usize, clock: usize) {
         info!("test npu cru");
 
