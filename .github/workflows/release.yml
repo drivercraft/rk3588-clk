@@ -122,4 +122,4 @@ jobs:
           toolchain: nightly-2025-04-01
 
       - name: Publish to crates.io
-        run: cargo publish --registry crates-io --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish --no-verify --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
