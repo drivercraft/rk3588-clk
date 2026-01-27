@@ -3,6 +3,10 @@
 //! This module provides functions to configure and control clocks for USB controllers.
 //! The RK3588 supports multiple USB interfaces including USB3 OTG, USB3 Host, and USB2 Host.
 
+// Allow Clippy warnings for hardware register operations
+#![allow(clippy::identity_op)]
+#![allow(clippy::result_unit_err)]
+
 use crate::{OSC_HZ, Rk3588Cru, constant::*};
 use log::{debug, info};
 use tock_registers::interfaces::{Readable, Writeable};

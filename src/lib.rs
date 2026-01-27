@@ -49,6 +49,9 @@
 //! ```
 //!
 #![no_std]
+// Allow Clippy warnings for specific patterns
+#![allow(clippy::manual_is_multiple_of)]
+#![allow(clippy::result_unit_err)]
 
 extern crate alloc;
 

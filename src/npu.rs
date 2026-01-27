@@ -3,6 +3,11 @@
 //! This module provides functions to configure and control clocks for the Neural Processing Unit (NPU).
 //! The RK3588 includes multiple NPU instances (NPU0, NPU1, NPU2) that require careful clock configuration.
 
+// Allow Clippy warnings for hardware register operations
+#![allow(clippy::inconsistent_digit_grouping)]
+#![allow(clippy::identity_op)]
+#![allow(clippy::result_unit_err)]
+
 use crate::{Rk3588Cru, constant::*};
 use log::{debug, info};
 use tock_registers::interfaces::{Readable, Writeable};
