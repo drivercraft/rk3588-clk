@@ -1,8 +1,19 @@
+//! USB clock configuration for RK3588
+//!
+//! This module provides functions to configure and control clocks for USB controllers.
+//! The RK3588 supports multiple USB interfaces including USB3 OTG, USB3 Host, and USB2 Host.
+
+// Allow Clippy warnings for hardware register operations
+#![allow(clippy::identity_op)]
+#![allow(clippy::result_unit_err)]
+
 use crate::{OSC_HZ, Rk3588Cru, constant::*};
 use log::{debug, info};
 use tock_registers::interfaces::{Readable, Writeable};
 
 /// Clock MUX parent configuration
+///
+/// This helper struct manages clock multiplexer configurations with parent clocks.
 struct ClockMux {
     parents: &'static [usize],
 }
@@ -19,6 +30,15 @@ impl ClockMux {
     };
 
     /// Find best parent and divider for target rate
+    ///
+    /// # Arguments
+    ///
+    /// * `rate` - Target clock frequency in Hz
+    /// * `max_div` - Maximum divider value
+    ///
+    /// # Returns
+    ///
+    /// Returns `Some((parent_idx, div, actual_rate))` or `None` if no valid configuration found.
     fn find_best(&self, rate: usize, max_div: usize) -> Option<(usize, usize, usize)> {
         let mut best_parent_idx = 0;
         let mut best_div = 1;
@@ -48,6 +68,14 @@ impl ClockMux {
     }
 
     /// Select the best fixed frequency (no divider)
+    ///
+    /// # Arguments
+    ///
+    /// * `rate` - Target clock frequency in Hz
+    ///
+    /// # Returns
+    ///
+    /// Returns a tuple of (parent_idx, actual_rate).
     fn select_fixed(&self, rate: usize) -> (usize, usize) {
         for (idx, &parent_rate) in self.parents.iter().enumerate() {
             if rate >= parent_rate {
@@ -62,6 +90,22 @@ impl ClockMux {
 
 impl Rk3588Cru {
     /// Get USB clock rate
+    ///
+    /// # Arguments
+    ///
+    /// * `clk_id` - The USB clock identifier
+    ///
+    /// # Returns
+    ///
+    /// Returns the clock frequency in Hz, or an error if the clock ID is unsupported.
+    ///
+    /// # Supported Clock IDs
+    ///
+    /// - `CLK_UTMI_USBHOST3_0` - USB3 UTMI clock
+    /// - `PCLK_PHP_USBHOST3_0` - USB3 PHP APB clock
+    /// - `CLK_USBPHY_480M` - USB PHY 480MHz reference clock
+    /// - `ACLK_USB` - USB AXI bus clock
+    /// - `HCLK_USB` - USB AHB bus clock
     pub fn usb_get_clk(&self, clk_id: u32) -> Result<usize, ()> {
         let reg = &self.registers().clksel;
 
@@ -121,6 +165,15 @@ impl Rk3588Cru {
     }
 
     /// Set USB clock rate
+    ///
+    /// # Arguments
+    ///
+    /// * `clk_id` - The USB clock identifier
+    /// * `rate` - Target clock frequency in Hz
+    ///
+    /// # Returns
+    ///
+    /// Returns the actual clock frequency that was set, or an error if the clock ID is unsupported.
     pub fn usb_set_clk(&self, clk_id: u32, rate: usize) -> Result<usize, ()> {
         let reg = &self.registers().clksel;
 
@@ -200,6 +253,14 @@ impl Rk3588Cru {
     }
 
     /// Enable USB clock gate
+    ///
+    /// # Arguments
+    ///
+    /// * `gate_id` - The USB gate identifier to enable
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(true)` if the gate is enabled, or an error message if the gate ID is unknown.
     pub fn usb_gate_enable(&self, gate_id: u32) -> Result<bool, &'static str> {
         debug!("Enabling USB gate_id {}", gate_id);
         let reg = &self.registers().gate;
@@ -242,6 +303,14 @@ impl Rk3588Cru {
     }
 
     /// Disable USB clock gate
+    ///
+    /// # Arguments
+    ///
+    /// * `gate_id` - The USB gate identifier to disable
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(true)` on success, or an error if the gate ID is unsupported.
     pub fn usb_gate_disable(&self, gate_id: u32) -> Result<bool, ()> {
         debug!("Disabling USB gate_id {}", gate_id);
         let reg = &self.registers().gate;
@@ -284,6 +353,14 @@ impl Rk3588Cru {
     }
 
     /// Get USB clock gate status
+    ///
+    /// # Arguments
+    ///
+    /// * `gate_id` - The USB gate identifier to check
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(true)` if the gate is enabled, `Ok(false)` if disabled, or an error message if the gate ID is unknown.
     pub fn usb_gate_status(&self, gate_id: u32) -> Result<bool, &'static str> {
         debug!("Getting status for USB gate_id {}", gate_id);
         let reg = &self.registers().gate;
